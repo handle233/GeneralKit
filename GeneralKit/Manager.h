@@ -50,14 +50,14 @@ private:
 	int TimeModOverIndex;
 
 	DWORD TimerSingleProc();
+	int SeekMod(Module** SeekList, int& Index, int ID);
 public:
 	Manager();
 	~Manager();
 	void AddMod(Module* NewMod);
-	int SeekMod(int ID);
-	void AddTimeMod(int Index);
+	void AddTimeMod(int Code);
 	bool FreeTimeMod(int Code);
-	void AddRunMod(int Index);
+	void AddRunMod(int Code);
 	bool FreeRunMod(int Code);
 	void gc();
 

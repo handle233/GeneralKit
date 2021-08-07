@@ -45,24 +45,25 @@ void Manager::AddMod(Module* NewMod) {
 	if (ModOverIndex >= 16) {
 		throw ModuleOverflow();
 	}
-	if (SeekMod(NewMod->IdentifyCode) != -1) {
+	if (SeekMod(Mods,ModOverIndex,NewMod->IdentifyCode) != -1) {
 		throw ModuleDefined();
 	}
 	Mods[ModOverIndex] = NewMod;
 	ModOverIndex++;
 }
-int Manager::SeekMod(int ID) {
-	for (int a = 0; a < ModOverIndex; a++) {
-		if (Mods[a]->IdentifyCode == ID) {
+int Manager::SeekMod(Module** SeekList,int &Index, int ID) {
+	for (int a = 0; a < Index; a++) {
+		if (SeekList[a]->IdentifyCode == ID) {
 			return a;
 		}
 	}
 	return -1;
 }
-void Manager::AddTimeMod(int Index) {
+void Manager::AddTimeMod(int Code) {
 	if (TimeModOverIndex >= 8) {
 		throw ModuleOverflow();
 	}
+	int Index = SeekMod(Mods, ModOverIndex, Code);
 	TimeMods[TimeModOverIndex] = Mods[Index];
 	Mods[Index]->UsingCount++;
 	TimeModOverIndex++;
@@ -86,10 +87,11 @@ bool Manager::FreeTimeMod(int Code) {
 	TimeModOverIndex--;
 	return true;
 }
-void Manager::AddRunMod(int Index) {
+void Manager::AddRunMod(int Code) {
 	if (RunModOverIndex >= 8) {
 		throw ModuleOverflow();
 	}
+	int Index = SeekMod(Mods, ModOverIndex, Code);
 	RunMods[RunModOverIndex] = Mods[Index];
 	Mods[Index]->UsingCount++;
 	RunModOverIndex++;
