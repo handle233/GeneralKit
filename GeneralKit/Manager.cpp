@@ -73,12 +73,7 @@ void Manager::AddTimeMod(int Code) {
 	}
 }
 bool Manager::FreeTimeMod(int Code) {
-	int Index = -1;
-	for (int a = 0; a < TimeModOverIndex; a++) {
-		if (TimeMods[a]->IdentifyCode == Code) {
-			Index = a;
-		}
-	}
+	int Index = SeekMod(TimeMods, TimeModOverIndex, Code);
 	if (Index == -1) {
 		return false;
 	}
@@ -97,12 +92,7 @@ void Manager::AddRunMod(int Code) {
 	RunModOverIndex++;
 }
 bool Manager::FreeRunMod(int Code) {
-	int Index = -1;
-	for (int a = 0; a < RunModOverIndex; a++) {
-		if (RunMods[a]->IdentifyCode == Code) {
-			Index = a;
-		}
-	}
+	int Index = SeekMod(RunMods, RunModOverIndex, Code);
 	if (Index == -1) {
 		return false;
 	}

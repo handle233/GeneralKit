@@ -6,130 +6,159 @@
 * 缅怀袁隆平院士
 **/
 #include "CommonHead.h"
-class Point;
+
 
 class Figure {
 private:
-	double Num;
-	static int CarelessMininum;
+	double Number;
 public:
-	Figure Square() {
-		return Num * Num;
+	Figure() {
+		Number = 0;
 	}
-	Figure() :Num(0) {
-
+	Figure(double N) {
+		Number = N;
 	}
-	Figure(double N) :Num(N) {
-
+	operator double(){
+		return Number;
 	}
-	operator double() {
-		return Num;
+	Figure operator +(Figure A) {
+		return Number + A.Number;
 	}
-	inline bool operator ==(const Figure &AnoNum) {
-		if (Num - AnoNum.Num < CarelessMininum) {
-			return true;
-		}
-		return false;
+	Figure operator -(Figure A) {
+		return Number - A.Number;
 	}
-	inline bool operator !=(const Figure& AnoNum) {
-		if (*this == AnoNum) {
-			return false;
-		}
-		return true;
+	Figure operator *(Figure A) {
+		return Number * A.Number;
 	}
-	inline bool operator >(const Figure& AnoNum) {
-		if (Num > AnoNum.Num) {
-			return true;
-		}
-		return false;
+	Figure operator /(Figure A) {
+		return Number / A.Number;
 	}
-	inline bool operator <(const Figure& AnoNum) {
-		if (Num < AnoNum.Num) {
-			return true;
-		}
-		return false;
+	Figure operator +=(Figure A) {
+		return Number += A.Number;
 	}
-	inline bool operator >=(const Figure& AnoNum) {
-		if (Num >= AnoNum.Num) {
-			return true;
-		}
-		return false;
+	Figure operator -=(Figure A) {
+		return Number -= A.Number;
 	}
-	inline bool operator <=(const Figure& AnoNum) {
-		if (Num <= AnoNum.Num) {
-			return true;
-		}
-		return false;
+	Figure operator >(Figure A) {
+		return Number > A.Number;
 	}
-	inline void operator +=(const Figure AnoNum) {
-		Num += AnoNum.Num;
+	Figure operator >=(Figure A) {
+		return Number >= A.Number;
 	}
-	inline void operator -=(const Figure& AnoNum) {
-		Num -= AnoNum.Num;
+	Figure operator <(Figure A) {
+		return Number > A.Number;
+	}
+	Figure operator <=(Figure A) {
+		return Number <= A.Number;
+	}
+	Figure operator ==(Figure A) {
+		return Number == A.Number;
 	}
 };
 
 class Vector {
 public:
 	Figure x, y;
-	Vector();
-	Vector(Figure x_, Figure y_);
-	Vector(const Vector& Vec);
-	Figure length();
-	Figure abs();
-	double Angle();
+	Vector(Figure xCoord, Figure yCoord) {
+		x = xCoord, y = yCoord;
+	}
+	Figure abs() {
+		return sqrt(x * x + y * y);
+	}
+	Vector Unit() {
+		Vector tmp = Vector(x / abs(), y / abs());
+		return tmp;
+	}
+	Vector operator +(const Vector &Vec) {
+		Vector nVec(x + Vec.x, y + Vec.y);
+		return nVec;
+	}
+	Vector operator -(const Vector& Vec) {
+		Vector nVec(x - Vec.x, y - Vec.y);
+		return nVec;
+	}
+	Figure operator *(const Vector& Vec) {
+		return x * Vec.x + y * Vec.y;
+	}
+	Vector operator *(const Figure& Fig) {
+		return Vector(x * Fig, y * Fig);
+	}
+};
 
-	Vector operator +(Vector Vec);
-	Vector operator -(Vector Vec);
-	Vector operator *(Figure Right);
-	Figure operator *(Vector Vec);
-	Vector operator /(Figure Num);
+class Point {
+private:
+	Vector p;
+public:
+	Figure x() { return p.x; }
+	Figure y() { return p.y; }
+	Point(Figure x, Figure y) :p(x, y) {
+		
+	}
+	Point(POINT& pt) :p(pt.x, pt.y) {
+		
+	}
+
+	operator POINT() {
+		POINT pt;
+		pt.x = p.x;
+		pt.y = p.y;
+		return pt;
+	}
+};
+
+class Range {
+public:
+	Figure low, high;
+	bool DisableLow, DisableHigh;
+
+	void KeepLowHigh() {
+		if (low > high) {
+			Figure tmp = high;
+			high = low;
+			low = tmp;
+		}
+	}
+	Range(Figure A, Figure B) {
+		low = A, high = B;
+		KeepLowHigh();//以防万一
+		DisableHigh = DisableLow = false;
+	}
+	Range operator +(Figure TobeAdd) {
+		if (TobeAdd > high) {
+			high = TobeAdd;
+		}
+		else if (TobeAdd < low) {
+			low = TobeAdd;
+		}
+		return *this;
+	}
+	bool operator &&(Figure N) {
+		KeepLowHigh();//以防万一
+		if ((N > low || DisableLow) && (N < high || DisableHigh)) {
+			return true;
+		}
+		return false;
+	}
 };
 
 class Line {
 private:
-	void FixRange();
-public:
-	bool Range;
-	Figure RangeY1, RangeY2;
 	Figure k, b;
-	Line(Figure k_, Figure b_);
-	Line(Vector& Vec);
-	Line(Point& Pt, Vector& Vec);
-	bool operator ==(Point& Pt);
-	bool operator>(Point& Pt);
-	bool operator<(Point& Pt);
-	bool operator>=(Point& Pt);
-	bool operator<=(Point& Pt);
-};
-
-class Point {
 public:
-	Figure x, y;
-	Point();
-	Point(Figure X, Figure Y);
-	Point(const Point& Pt);
-
-	Point operator +(Point& Pt);
-	Point operator -(Point& Pt);
-	Point operator *(Figure Num);
-
-	//Windows support
-	operator POINT();
-	Point(const POINT& pt);
-};
-
-class Rect {
-public:
-	static int Segment;
-	Point LT, RD;
-	Rect(Figure x, Figure y,Figure Width,Figure Height);
-	Rect(Vector& Vec);
-	Rect(Point Pt, Vector Vec);
-	bool operator ==(Point& Pt);
-	bool operator ||(Line& L);
-	bool operator &&(Rect& Rect);
-	//windows SUPPORT
-	Rect(RECT rect);
-	operator RECT();
+	Range XRange;
+	Line(Point pt, Vector Line) :XRange(pt.x(), pt.x() + Line.x) {
+		k = Line.Unit().y / Line.Unit().x;
+		b = pt.y() - k * pt.x();
+	}
+	bool operator &&(Line& Ano) {
+		if ((k - Ano.k) == Figure(0)) {
+			return false;
+		}
+		Figure X = (Ano.b - b) / (k - Ano.k);
+		return XRange && X;
+	}
+	Figure operator &(Line& Ano) {
+		Figure X = (Ano.b - b) / (k - Ano.k);
+		return X;
+	}
 };

@@ -7,210 +7,161 @@
 **/
 #include "CommonHead.h"
 
-class IndexOverflow :public Exception {
-public:
-	IndexOverflow() :Exception(EXPT_ERROR, "Index Overflow") { }
-};
-class IndexUnderflow :public Exception {
-public:
-	IndexUnderflow() :Exception(EXPT_ERROR, "Index Underflow") { }
-};
-
 template<typename Type>
 class List {
-	friend class Node;
 private:
-	SRWLOCK Lock;
-	class Node{
+	class Node {
 	private:
-		Type* Data;
-		Node* NextNode;
-		Node* LastNode;
+		Type Data;
+		Node* lst, * nxt;
+		CRITICAL_SECTION Lock;
+		List& parent;
 	public:
-		operator Type& () {
-			return *Data;
-		}
-		Node(Type const* pData) {
-			Data = new Type;
-			memcpy(Data, pData, sizeof(Type));
-			NextNode = nullptr;
-			LastNode = nullptr;
-		}
-		Node* operator >>(Node* Nxt) {
-			Node* Last = NextNode;
-			NextNode = Nxt;
-			return Last;
-		}
-		Node* operator <<(Node* Lst) {
-			Node* Last = LastNode;
-			LastNode = Lst;
-			return Last;
-		}
-		Node* operator +(int num) {
-			Node* TheNode = this;
-			for (int a = 0; a < num; a++) {
-				if (TheNode == nullptr) {
-					throw IndexOverflow();
-				}
-				TheNode = TheNode->NextNode;
-			}
-			return TheNode;
-		}
-		Node& operator -(int num) {
-			Node* TheNode = this;
-			for (int a = 0; a < num; a++) {
-				TheNode = TheNode->LastNode;
-				if (TheNode == nullptr) {
-					throw IndexUnderflow();
-				}
-			}
-			return *TheNode;
+		Node(List& par) :parent(par) {
+			lst = nxt = nullptr;
+			memset(&Data, 0, sizeof(Type));
+			InitializeCriticalSection(&Lock);
+			parent.length++;
 		}
 		~Node() {
-			NextNode == nullptr ? 0 : *NextNode << LastNode;
-			LastNode == nullptr ? 0 : *LastNode >> NextNode;
-			delete Data;
+			Node* a = this;
+			if (nxt != nullptr && lst != nullptr) {
+				*lst >> *nxt;
+				*nxt << *lst;
+			}
+			DeleteCriticalSection(&Lock);
+			parent.length--;
+		}
+		operator Type() {
+			return Data;
+		}
+		Type Element() {
+			return Data;
+		}
+		Node& operator =(const Type NData) {
+			Data = NData;
+			return *this;
+		}
+		Node& operator <<(Node& nlst) {
+			lst = &nlst;
+			return *lst;
+		}
+		Node& operator >>(Node& nnxt) {
+			nxt = &nnxt;
+			return *nxt;
+		}
+		inline Node& operator +(int Num) {
+			int a = 0;
+			Node* T = this;
+			while (a < Num) {
+				if (T == nullptr) {
+					throw Indexflow();
+				}
+				T = T->nxt;
+				a++;
+			}
+			return *T;
+		}
+		inline Node& operator --() {
+			return *lst;
 		}
 	};
-
-	Node* Root;
-	int Length;
+	int length;
 
 	Node* CacheNode;
 	int CacheIndex;
+	CRITICAL_SECTION CacheLock;
 
-	Node* ToThatNode(int ToIndex) {
-		//initalize
-		IndexLegal(ToIndex);
-		Node* CurNode = nullptr;
-		int Index = 0;
-		//Check cache
-		if (CacheHit(ToIndex)) {
-			CurNode = CacheNode;
-			Index = CacheIndex;
-			//cout << "Cache hitted." << CurNode->GetData()<< "\t" << Index << endl;
-		}
-		else {
-			CurNode = Root;
-		}
-		//do
-		CurNode = *CurNode + (ToIndex - Index);
-
-		CacheIndex = ToIndex;
-		CacheNode = CurNode;
-		//cout << "Cache updated" << CacheNode->GetData() << "\t" << CacheIndex << endl;
-		return CurNode;
-	}
-	void IndexLegal(int Index) {
-		if (Index < 0) {
-			throw IndexUnderflow();
-		}
-		if (Index >= Length && Length != 0 && Index != 0) {
-			throw IndexOverflow();
-		}
-	}
-	bool CacheHit(int Index) {
-		if (CacheNode == nullptr) {
-			return false;
-		}
-		if (Index >= CacheIndex) {
-			return true;
-		}
-		return false;
-	}
-public:
-	const int& length = Length;
-	List() {
-		InitializeSRWLock(&Lock);
-		Root = nullptr;
-		Length = 0;
-		CacheIndex = 0;
+	void FlushCache() {
+		EnterCriticalSection(&CacheLock);
 		CacheNode = nullptr;
+		CacheIndex = 0;
+		LeaveCriticalSection(&CacheLock);
 	}
-	bool Add(int Index, const Type& Data);
-	Type& operator[](int Index) {
-		AcquireSRWLockShared(&Lock);
-		IndexLegal(Index);
-		Node* Cur = ToThatNode(Index);
-		if (Cur == nullptr) {
-			cout << "Bug 来啦！！" << endl;
-		}
-		ReleaseSRWLockShared(&Lock);
-		return *Cur;
+	void UpdateCache(Node& N, int CurInx) {
+		EnterCriticalSection(&CacheLock);
+		CacheNode = &N;
+		CacheIndex = CurInx;
+		LeaveCriticalSection(&CacheLock);
 	}
-	void Del(int Index) {
-		AcquireSRWLockExclusive(&Lock);
-		Node* Cur = ToThatNode(Index);
-		if (Index == 0) {
-			Root = *Cur + 1;
-			delete Cur;
-			if (CacheIndex == Index) {
-				CacheIndex = 0;
-				CacheNode = nullptr;
-			}
-			Length--;
-			ReleaseSRWLockExclusive(&Lock);
-			return;
+	int CacheHit(Node** Node, int ToInx) {
+		EnterCriticalSection(&CacheLock);
+		if (ToInx > CacheIndex && CacheNode!=nullptr) {//Hit
+			*Node = CacheNode;
+			LeaveCriticalSection(&CacheLock);
+			return CacheIndex;
 		}
-		if (CacheIndex == Index) {
-			CacheIndex = 0;
-			CacheNode = nullptr;
-		}
-		delete Cur;
-		Length--;
-		ReleaseSRWLockExclusive(&Lock);
-	}
-	void operator delete(void* p) {
-		List* pL = (List*)p;
-		while (pL->Length != 0) {
-			pL->Del(0);
-		}
-	}
-
-	/*
-	* Untested
-	*/
-	int Seek(const Type& Data) {
-		Node Cur = *Root;
-		for (int a = 0; a < length; a++) {
-			if (memcmp(Data, (Type)Cur, sizeof(Type)) == 0) {
-				return a;
-			}
-			Cur = Cur + 1;
-		}
+		*Node = &Root;
+		LeaveCriticalSection(&CacheLock);
 		return -1;
 	}
-};
-
-template<typename Type>
-inline bool List<Type>::Add(int Index, const Type& Data)
-{
-	AcquireSRWLockExclusive(&Lock);
-	if (Index != -1) {
-		IndexLegal(Index);
+public:
+	Node Root;//这是列表的-1项，也是Before Begin 指针
+	const int& Length = length;
+	List() :Root(*this) {
+		CacheNode = nullptr;
+		CacheIndex = 0;
+		length = 0;
+		InitializeCriticalSection(&CacheLock);
 	}
-	if (Index == -1) {
-		Node* New = new Node(&Data);
-		*New >> Root;
-		*New << nullptr;
-		Root==nullptr?0:*Root << New;
-		Root = New;
-		CacheIndex++;
-		Length++;
-		ReleaseSRWLockExclusive(&Lock);
+	List(List& Copies) :Root(*this) {
+		length = 0;
+		Node* C = &Copies.Root;
+
+		C = &((*C) + Copies.length);
+		Add(0, (*C));
+	}
+	~List() {
+		Node* L = &(Root + 1), * N = &(Root + 2);
+		while (length > 0) {
+			delete L;
+			L = N;
+			if (length > 0) {
+				N = &((*N) + 1);
+			}
+		}
+	}
+	Node& operator [](int Inx) {
+		Node *T = nullptr;
+		int i = CacheHit(&T,Inx);
+		while (i < Inx) {
+			T = &((*T) + 1);
+			i++;
+		}
+		UpdateCache(*T, Inx);
+		return *T;
+	}
+
+	bool Add(int Inx,Type Data) {
+		Node* T = &Root;
+		T = &((*T) + Inx);
+
+		Node* N = new Node(*this);
+		*N = Data;
+		*N >> (*T) + 1;
+		if (&((*T) + 1) != nullptr) {
+			((*T) + 1) << *N;
+		}
+		*N << *T;
+		*T >> *N;
+		FlushCache();
+		
 		return true;
 	}
-	Node* Ins = ToThatNode(Index);
-	Node* New = new Node(&Data);
-	*New >> (*Ins + 1);
-	*New << Ins;
-	*Ins >> New;
-
-	if (Index < CacheIndex) {
-		CacheIndex++;
+	bool Insert(List& Source, Range& Copys, int ToInx = 0) {
+		Node* T = &Source[Copys.low];
+		for (int a = Copys.low; a < Copys.high; a++) {
+			Add(ToInx, (*T));
+			T = &((*T) + 1);
+		}
+		FlushCache();
+		return true;
 	}
 
-	Length++;
-	ReleaseSRWLockExclusive(&Lock);
-	return true;
-}
+	class Indexflow :public Exception{
+	public:
+		Indexflow() :Exception(EXPT_ERROR,"Index over//under flow") {
+
+		}
+	};
+};

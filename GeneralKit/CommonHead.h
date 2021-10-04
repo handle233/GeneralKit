@@ -15,10 +15,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <process.h>
 #include <Windows.h>
+#include <windowsx.h>
 #include <iostream>
 
-#include "Defines.h"
 #include "Exception.h"
 #include "MathSupport.h"
 
